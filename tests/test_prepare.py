@@ -6,12 +6,13 @@
 
 
 import asyncio
-import asyncpg
 import gc
 import unittest
 
-from asyncpg import _testbase as tb
+import asyncpg
+from asyncpg import _testbase as tb, AttributeRowDescription, RowDescriptionType, ParameterDescriptionType
 from asyncpg import exceptions
+from asyncpg.connection import Connection
 
 
 class TestPrepare(tb.ConnectedTestCase):
@@ -611,3 +612,76 @@ class TestPrepare(tb.ConnectedTestCase):
             'prepared statement "foobar" already exists',
         ):
             await self.con.prepare('select 1', name='foobar')
+
+    async def test_prepare_returns_expected_type_for_attributes(self):
+        self.con: Connection
+
+        transaction = self.con.transaction()
+        await transaction.start()
+
+        await self.con.execute("create table test_table(id serial, name char(128))")
+
+        column_types = await self.con.fetch("""
+            select attrelid, attname, atttypid, attlen, attnum, atttypmod, pg_type.typname as type_name
+            from pg_attribute
+            join pg_type on pg_attribute.atttypid = pg_type.oid
+                where attrelid = 'test_table'::regclass::oid and attname in ('id','name')
+            order by attnum asc;
+        """)
+
+        expected_attributes = [
+            AttributeRowDescription(
+                name=column_type["attname"],
+                type=RowDescriptionType(table_oid=column_type["attrelid"],
+                                        column_attribute_number=column_type["attnum"],
+                                        oid=column_type["atttypid"],
+                                        name=column_type["type_name"],
+                                        data_type_size=column_type["attlen"],
+                                        type_modifier=column_type["atttypmod"],
+                                        kind="scalar",
+                                        schema="pg_catalog"
+                                        )
+                )
+            for column_type in column_types]
+
+        prepared_query = await self.con.prepare("select * from test_table where id = $1 and name is null")
+        actual_attributes = prepared_query.get_attributes()
+
+        for expected_attribute, actual_attribute in zip(expected_attributes, actual_attributes):
+            self.assertEqual(actual_attribute, expected_attribute)
+
+        await transaction.rollback()
+
+    async def test_prepare_returns_expected_type_for_parameters(self):
+        self.con: Connection
+
+        transaction = self.con.transaction()
+        await transaction.start()
+
+        await self.con.execute("create table test_table(id serial, name char(128))")
+
+        prepared_query = await self.con.prepare("select * from test_table where id = $1 and name = $2")
+        actual_parameters = prepared_query.get_parameters()
+
+        parameters_types = await self.con.fetch(query="""
+            select attrelid, attname, atttypid, attlen, attnum, atttypmod, pg_type.typname as type_name
+            from pg_attribute
+            join pg_type on pg_attribute.atttypid = pg_type.oid
+                where attrelid = 'test_table'::regclass::oid and attname in ('id','name')
+            order by attnum asc;
+        """)
+
+        expected_parameters = [
+                ParameterDescriptionType(
+                    oid=parameter_type["atttypid"],
+                    name=parameter_type["type_name"],
+                    kind="scalar",
+                    schema="pg_catalog"
+                )
+            for parameter_type in parameters_types
+        ]
+
+
+        for expected_attribute, actual_attribute in zip(expected_parameters, actual_parameters):
+            self.assertEqual(actual_attribute, expected_attribute)
+        await transaction.rollback()

@@ -41,8 +41,9 @@ cdef class PreparedStatementState:
             if codec is None:
                 raise exceptions.InternalClientError(
                     'missing codec information for OID {}'.format(oid))
-            result.append(apg_types.Type(
-                oid, codec.name, codec.kind, codec.schema))
+            result.append(apg_types.ParameterDescriptionType(
+                oid=oid, name=codec.name, kind=codec.kind, schema=codec.schema
+            ))
 
         return tuple(result)
 
@@ -54,8 +55,13 @@ cdef class PreparedStatementState:
 
         result = []
         for d in self.row_desc:
+            # https://www.postgresql.org/docs/current/protocol-message-formats.html#PROTOCOL-MESSAGE-FORMATS-ROWDESCRIPTION
             name = d[0]
+            table_oid = d[1]
+            column_attribute_number = d[2]
             oid = d[3]
+            data_type_size = d[4]
+            type_modifier = d[5]
 
             codec = self.settings.get_data_codec(oid)
             if codec is None:
@@ -65,8 +71,10 @@ cdef class PreparedStatementState:
             name = name.decode(self.settings._encoding)
 
             result.append(
-                apg_types.Attribute(name,
-                    apg_types.Type(oid, codec.name, codec.kind, codec.schema)))
+                apg_types.AttributeRowDescription(name,
+                    apg_types.RowDescriptionType(
+                        table_oid=table_oid, column_attribute_number=column_attribute_number,oid=oid, name=codec.name,
+                        data_type_size=data_type_size, type_modifier=type_modifier,kind=codec.kind, schema=codec.schema)))
 
         return tuple(result)
 

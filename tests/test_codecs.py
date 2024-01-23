@@ -1225,7 +1225,11 @@ class TestCodecs(tb.ConnectedTestCase):
             self.assertTrue(isinstance(at, tuple))
             self.assertEqual(len(at), 1)
             self.assertEqual(at[0].name, 'result')
-            self.assertEqual(at[0].type, pt[0])
+
+            self.assertEqual(at[0].type.oid, pt[0].oid)
+            self.assertEqual(at[0].type.name, pt[0].name)
+            self.assertEqual(at[0].type.kind, pt[0].kind)
+            self.assertEqual(at[0].type.schema, pt[0].schema)
 
             err = 'cannot use custom codec on type public._hstore'
             with self.assertRaisesRegex(asyncpg.InterfaceError, err):
@@ -1310,7 +1314,10 @@ class TestCodecs(tb.ConnectedTestCase):
             self.assertTrue(isinstance(at, tuple))
             self.assertEqual(len(at), 1)
             self.assertEqual(at[0].name, 'result')
-            self.assertEqual(at[0].type, pt[0])
+            self.assertEqual(at[0].type.oid, pt[0].oid)
+            self.assertEqual(at[0].type.name, pt[0].name)
+            self.assertEqual(at[0].type.kind, pt[0].kind)
+            self.assertEqual(at[0].type.schema, pt[0].schema)
 
         finally:
             await self.con.execute('''

@@ -14,25 +14,33 @@ from asyncpg.pgproto.types import (
 
 
 __all__ = (
-    'Type', 'Attribute', 'Range', 'BitString', 'Point', 'Path', 'Polygon',
+    'RowDescriptionType', 'AttributeRowDescription', 'ParameterDescriptionType','Range', 'BitString', 'Point', 'Path', 'Polygon',
     'Box', 'Line', 'LineSegment', 'Circle', 'ServerVersion',
 )
 
 
-Type = collections.namedtuple('Type', ['oid', 'name', 'kind', 'schema'])
-Type.__doc__ = 'Database data type.'
-Type.oid.__doc__ = 'OID of the type.'
-Type.name.__doc__ = 'Type name.  For example "int2".'
-Type.kind.__doc__ = \
+RowDescriptionType = collections.namedtuple('RowDescriptionType', [
+        'table_oid','column_attribute_number','oid', 'name', 'data_type_size', 'type_modifier', 'kind', 'schema'
+    ])
+RowDescriptionType.__doc__ = 'Database row data type'
+RowDescriptionType.oid.__doc__ = 'OID of the type.'
+RowDescriptionType.name.__doc__ = 'Type name.  For example "int2".'
+RowDescriptionType.kind.__doc__ = \
     'Type kind.  Can be "scalar", "array", "composite" or "range".'
-Type.schema.__doc__ = 'Name of the database schema that defines the type.'
+RowDescriptionType.schema.__doc__ = 'Name of the database schema that defines the type.'
+RowDescriptionType.table_oid.__doc__ = 'table oid'
 
 
-Attribute = collections.namedtuple('Attribute', ['name', 'type'])
-Attribute.__doc__ = 'Database relation attribute.'
-Attribute.name.__doc__ = 'Attribute name.'
-Attribute.type.__doc__ = 'Attribute data type :class:`asyncpg.types.Type`.'
+ParameterDescriptionType = collections.namedtuple('ParameterDescriptionType', [
+    "oid", "name", "kind", "schema"
+])
+ParameterDescriptionType.__doc__ = 'Database parameter data type'
 
+
+AttributeRowDescription = collections.namedtuple('AttributeRowDescription', ['name', 'type'])
+AttributeRowDescription.__doc__ = 'Database row description relation attribute.'
+AttributeRowDescription.name.__doc__ = 'Attribute name.'
+AttributeRowDescription.type.__doc__ = 'Attribute data type :class:`asyncpg.types.RowDescriptionType`.'
 
 ServerVersion = collections.namedtuple(
     'ServerVersion', ['major', 'minor', 'micro', 'releaselevel', 'serial'])
